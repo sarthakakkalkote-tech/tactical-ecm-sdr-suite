@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DEFENCE ELECTRONIC WARFARE & TACTICAL SDR SUITE</title>
+<style>
+  :root {
+    --bg-main: #050b11;
+    --panel-bg: rgba(8, 20, 32, 0.92);
+    --border-line: #00ffcc33;
+    --accent-cyan: #00f3ff;
+    --accent-green: #00ff66;
+    --accent-red: #ff3344;
+    --accent-amber: #ffaa00;
+    --text-dim: #5c7b88;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Consolas', 'Courier New', monospace; }
+  body {
+    background: var(--bg-main);
+    color: var(--accent-cyan);
+    min-height: 100vh;
+    padding: 12px;
+    background-image: 
+      radial-gradient(ellipse at center, #0f2638 0%, #050b11 75%),
+      repeating-linear-gradient(0deg, rgba(0,0,0,0.18) 0px, rgba(0,0,0,0.18) 1px, transparent 1px, transparent 2px);
+  }
+
+  header {
+    display: flex; justify-content: space-between; align-items: center;
+    border-bottom: 2px solid var(--accent-cyan);
+    padding-bottom: 8px; margin-bottom: 10px;
+    text-shadow: 0 0 10px var(--accent-cyan);
+  }
+
+  .header-left h1 { font-size: 19px; letter-spacing: 2px; }
+  .header-left p { font-size: 10px; color: var(--accent-green); }
+
+  .header-badges { display: flex; gap: 8px; }
+  .badge {
+    padding: 3px 8px; font-size: 11px; font-weight: bold;
+    border: 1px solid var(--accent-cyan); border-radius: 3px;
+    background: rgba(0, 243, 255, 0.08);
+  }
+  .badge.alert { border-color: var(--accent-red); color: var(--accent-red); animation: blink 1s infinite; }
+  .badge.armed { border-color: var(--accent-green); color: var(--accent-green); }
+  @keyframes blink { 50% { opacity: 0.3; } }
+
+  .nav-tabs {
+    display: flex; gap: 6px; margin-bottom: 10px;
+  }
+  .nav-btn {
+    padding: 7px 16px; font-size: 11px; font-weight: bold;
+    background: rgba(0, 243, 255, 0.05); border: 1px solid var(--border-line);
+    color: var(--text-dim); cursor: pointer; transition: 0.2s;
+  }
+  .nav-btn.active, .nav-btn:hover {
+    background: rgba(0, 243, 255, 0.2); border-color: var(--accent-cyan);
+    color: var(--accent-cyan); box-shadow: 0 0 8px rgba(0, 243, 255, 0.25);
+  }
+
+  .grid-layout {
+    display: grid;
+    grid-template-columns: 290px 1fr 320px;
+    gap: 12px;
+  }
+
+  .grid-dual {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .panel {
+    background: var(--panel-bg);
+    border: 1px solid var(--border-line);
+    padding: 10px; position: relative;
+    box-shadow: inset 0 0 15px rgba(0, 255, 204, 0.04);
+  }
+
+  .panel-title {
+    font-size: 11px; font-weight: bold; letter-spacing: 1.5px;
+    color: var(--accent-amber); margin-bottom: 8px;
+    display: flex; justify-content: space-between;
+    border-bottom: 1px solid rgba(255, 170, 0, 0.25); padding-bottom: 3px;
+  }
+
+  canvas { display: block; background: #04090c; border: 1px solid #00ffcc22; }
+
+  .feed {
+    height: 480px; overflow-y: auto; font-size: 11px; line-height: 1.6;
+    padding-right: 5px;
+  }
+  .feed::-webkit-scrollbar { width: 4px; }
+  .feed::-webkit-scrollbar-thumb { background: var(--accent-cyan); }
+
+  .feed-item {
+    margin-bottom: 10px; padding: 7px; border-left: 3px solid var(--accent-cyan);
+    background: rgba(0, 243, 255, 0.03);
+  }
+  .feed-item.jammed { border-left-color: var(--accent-red); background: rgba(255, 51, 68, 0.05); }
+  .feed-item .meta { font-size: 10px; color: var(--text-dim); }
+  .feed-item .unprotected { color: var(--accent-red); margin-top: 3px; word-break: break-all; }
+  .feed-item .protected { color: var(--accent-green); font-weight: bold; margin-top: 2px; }
+
+  .btn-group { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  button.action-btn {
+    flex: 1; min-width: 120px; padding: 7px 8px; background: transparent;
+    border: 1px solid var(--accent-cyan); color: var(--accent-cyan);
+    font-weight: bold; cursor: pointer; font-size: 10px;
+    transition: all 0.2s;
+  }
+  button.action-btn:hover { background: var(--accent-cyan); color: #000; box-shadow: 0 0 8px var(--accent-cyan); }
+  button.danger { border-color: var(--accent-red); color: var(--accent-red); }
+  button.danger:hover { background: var(--accent-red); color: #fff; }
+
+  .bit-row { display: flex; gap: 8px; margin: 15px 0; }
+  .bit-box {
+    flex: 1; padding: 12px; font-size: 18px; font-weight: bold; text-align: center;
+    background: #02070a; border: 2px solid var(--accent-cyan); color: var(--accent-cyan);
+    cursor: pointer; transition: 0.2s;
+  }
+  .bit-box.flipped { border-color: var(--accent-red); color: var(--accent-red); background: rgba(255, 51, 68, 0.15); }
+
+  .matrix-block {
+    background: rgba(0,0,0,0.5); padding: 10px; border-left: 2px solid var(--accent-amber);
+    margin-top: 8px; font-size: 11px; line-height: 1.6; color: #a0c2d3;
+  }
+
+  footer {
+    display: flex; justify-content: space-between; font-size: 10px;
+    color: var(--text-dim); margin-top: 10px; border-top: 1px solid var(--border-line);
+    padding-top: 6px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <h1>TACTICAL ELECTRONIC COUNTER-COUNTERMEASURE SUITE</h1>
+    <p>JAM-RESISTANT DSSS-BPSK TRANSCEIVER WITH (7,4) SYSTEMATIC HAMMING CODE</p>
+  </div>
+  <div class="header-badges">
+    <div class="badge">TARGET: UAV-ALPHA (1200M)</div>
+    <div class="badge" id="pgBadge">PROCESSING GAIN: +8.45 dB</div>
+    <div class="badge alert" id="jamStatusBadge">HOSTILE JAMMER: +6.0 dB ACTIVE</div>
+    <div class="badge armed" id="audioBadge">AUDIO: ARMED (LIVE)</div>
+  </div>
+</header>
+
+<div class="nav-tabs">
+  <button class="nav-btn active" id="btnTab0" onclick="showTab(0)">1. TACTICAL RECON & MISSION LINK</button>
+  <button class="nav-btn" id="btnTab1" onclick="showTab(1)">2. ELECTRONIC WARFARE & SPECTRUM ANALYSIS</button>
+  <button class="nav-btn" id="btnTab2" onclick="showTab(2)">3. BASEBAND & (7,4) HAMMING CODE SANDBOX</button>
+</div>
+
+<!-- TAB 1: RECON -->
+<div id="sectionTab0">
+  <div class="grid-layout">
+    <div class="panel">
+      <div class="panel-title"><span>SECTOR 4 AIR DEFENCE RADAR</span><span id="radarAzimuth">AZIMUTH 360°</span></div>
+      <canvas id="radarCanvas" width="270" height="230"></canvas>
+
+      <div class="panel-title" style="margin-top: 10px;"><span>UAV FLIGHT ATTITUDE HUD</span><span id="hudAlt">ALT: 1200M</span></div>
+      <canvas id="attitudeCanvas" width="270" height="110"></canvas>
+
+      <div class="btn-group">
+        <button class="action-btn" onclick="burstPacket()">BURST PACKET</button>
+        <button class="action-btn danger" onclick="toggleJammer()">TOGGLE ECM JAMMER</button>
+        <button class="action-btn" onclick="toggleAudio()">TOGGLE RADIO AUDIO</button>
+        <button class="action-btn" onclick="toggleMotion()">MOTION: PATROL / LOCK</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title"><span>REAL-TIME TACTICAL TELEMETRY DECRYPTION FEED</span><span>PACKET DELIVERY RATIO: 100.0%</span></div>
+      <div class="feed" id="telemetryFeed"></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title"><span>RF SPECTRUM (PSD) & JAMMER SPIKE</span><span>2.44 GHz</span></div>
+      <canvas id="spectrumCanvas" width="300" height="180"></canvas>
+
+      <div class="panel-title" style="margin-top: 10px;"><span>I/Q CONSTELLATION SLICER (BPSK)</span><span>NOISE CLOUD</span></div>
+      <canvas id="constCanvas" width="300" height="180"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- TAB 2: ELECTRONIC WARFARE -->
+<div id="sectionTab1" style="display: none;">
+  <div class="grid-dual">
+    <div class="panel">
+      <div class="panel-title"><span>RF WATERFALL SPECTROGRAM (FREQUENCY VS TIME)</span><span>HEAT-MAP</span></div>
+      <canvas id="waterfallCanvas" width="560" height="420"></canvas>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title"><span>ECM THREAT SIMULATION & SPREADING FACTOR</span><span>CONTROLS</span></div>
+      <div style="margin: 15px 0;">
+        <label style="font-size:11px; color:var(--accent-amber);">HOSTILE JAMMING TYPE:</label>
+        <div class="btn-group" style="margin-top:5px;">
+          <button class="action-btn" onclick="setJammerType('tone')">SPOT TONE (+6 dB)</button>
+          <button class="action-btn" onclick="setJammerType('chirp')">SWEPT CHIRP (2.4-2.48 GHz)</button>
+          <button class="action-btn" onclick="setJammerType('barrage')">BARRAGE NOISE</button>
+        </div>
+      </div>
+
+      <div style="margin: 20px 0;">
+        <label style="font-size:11px; color:var(--accent-amber);">DSSS SPREADING FACTOR (PROCESSING GAIN):</label>
+        <div class="btn-group" style="margin-top:5px;">
+          <button class="action-btn" onclick="setSpreadingFactor(7)">SF = 7 (+8.45 dB)</button>
+          <button class="action-btn" onclick="setSpreadingFactor(15)">SF = 15 (+11.76 dB)</button>
+          <button class="action-btn" onclick="setSpreadingFactor(31)">SF = 31 (+14.91 dB)</button>
+        </div>
+      </div>
+
+      <div class="matrix-block">
+        <strong>THEORETICAL ANTI-JAM MARGIN:</strong><br>
+        • Current Jammer Power: <span id="lblJamPwr" style="color:var(--accent-red)">+6.0 dB (Active)</span><br>
+        • Current Processing Gain: <span id="lblPgVal" style="color:var(--accent-green)">+8.45 dB</span><br>
+        • Effective Anti-Jam Margin: <span id="lblAjMargin" style="color:var(--accent-cyan)">+2.45 dB (Link Survives)</span><br><br>
+        <em>DSSS spreads the narrowband jammer at receiver despreader, while restoring telemetry BPSK symbols[cite: 2].</em>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TAB 3: HAMMING SANDBOX -->
+<div id="sectionTab2" style="display: none;">
+  <div class="grid-dual">
+    <div class="panel">
+      <div class="panel-title"><span>INTERACTIVE (7,4) HAMMING CODEWORD SANDBOX</span><span>CLICK A BIT TO FLIP</span></div>
+      <p style="font-size:11px; color:#aaa; margin: 8px 0;">
+        Click on any bit below to inject an intentional channel error flip (0 to 1) and observe syndrome correction:
+      </p>
+
+      <div class="bit-row">
+        <div class="bit-box" onclick="flipBit(0)">b1: <span id="bit0">1</span></div>
+        <div class="bit-box" onclick="flipBit(1)">b2: <span id="bit1">0</span></div>
+        <div class="bit-box" onclick="flipBit(2)">b3: <span id="bit2">1</span></div>
+        <div class="bit-box" onclick="flipBit(3)">b4: <span id="bit3">1</span></div>
+        <div class="bit-box" onclick="flipBit(4)">p1: <span id="bit4">0</span></div>
+        <div class="bit-box" onclick="flipBit(5)">p2: <span id="bit5">1</span></div>
+        <div class="bit-box" onclick="flipBit(6)">p3: <span id="bit6">0</span></div>
+      </div>
+
+      <button class="action-btn" onclick="resetCodeword()" style="margin-bottom:12px;">RESET CODEWORD</button>
+
+      <div class="matrix-block" id="syndromeAnalysis">
+        <strong>SYNDROME VECTOR CALCULATION:</strong><br>
+        Syndrome S = H * r^T (mod 2)<br>
+        S = [0, 0, 0]^T -> <span style="color:var(--accent-green)">NO TRANSMISSION ERROR DETECTED</span>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title"><span>MATHEMATICAL MATRICES (SYSTEMATIC FORM)</span><span>THEORY</span></div>
+      <div class="matrix-block">
+        <strong>GENERATOR MATRIX G (4x7):</strong><br>
+        [ 1  0  0  0 | 1  1  0 ]<br>
+        [ 0  1  0  0 | 0  1  1 ]<br>
+        [ 0  0  1  0 | 1  1  1 ]<br>
+        [ 0  0  0  1 | 1  0  1 ]<br><br>
+        <strong>PARITY-CHECK MATRIX H (3x7):</strong><br>
+        [ 1  0  1  1 | 1  0  0 ]<br>
+        [ 1  1  1  0 | 0  1  0 ]<br>
+        [ 0  1  1  1 | 0  0  1 ]<br><br>
+        <strong>CORRECTION LOGIC:</strong><br>
+        Single bit errors point directly to the column index matching Syndrome S, allowing deterministic bit inversion without retransmission[cite: 2].
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <div>PRESENTATION TEAM: KAUSHIK RAGHUVANSHI (71) • SARTHAK AKKALKOTE (76) • ADITYA PANDEY (84) • SAURAVI KULKARNI (11)</div>
+  <div>PLATFORM: SOFTWARE-DEFINED RADIO (MATLAB + PYTHON SDR LIVE TRANSCEIVER)</div>
+</footer>
+
+<script>
+  let currentActiveTab = 0;
+  let jammerActive = true;
+  let audioEnabled = true;
+  let motionActive = true;
+  let radarAngle = 0;
+
+  let uavAngle = 0.8;
+  let uavSpeed = 0.007;
+  let uavTrail = [];
+
+  let jammerAngle = 2.4;
+  let jammerSpeed = 0.009;
+  let jammerTrail = [];
+
+  let bankRoll = 0;
+  let altVal = 1200;
+  let pktCounter = 0;
+
+  let currentJammerType = 'tone';
+  let currentSF = 7;
+  let currentPG = 8.45;
+
+  const originalCodeword = [1, 0, 1, 1, 0, 1, 0];
+  let currentCodeword = [...originalCodeword];
+
+  const telemetryMessages = [
+    "ECCM ENGAGED: DSSS SPREADING GAIN (+8.45 dB) ACTIVE",
+    "HOSTILE ECM ALERT: NARROWBAND TONE JAMMER DETECTED",
+    "UAV-01: COORD 18.989N 72.831E | TARGET ACQUIRED",
+    "UAV-01: HEADING 045 | ALT 1200M | TELEMETRY LOCKED",
+    "UAV-01: MISSION ACCOMPLISHED | RTB ROUTE SECURE"
+  ];
+
+  let wfHistory = [];
+
+  function showTab(idx) {
+    currentActiveTab = idx;
+    document.getElementById('sectionTab0').style.display = idx === 0 ? 'block' : 'none';
+    document.getElementById('sectionTab1').style.display = idx === 1 ? 'block' : 'none';
+    document.getElementById('sectionTab2').style.display = idx === 2 ? 'block' : 'none';
+
+    document.getElementById('btnTab0').classList.toggle('active', idx === 0);
+    document.getElementById('btnTab1').classList.toggle('active', idx === 1);
+    document.getElementById('btnTab2').classList.toggle('active', idx === 2);
+  }
+
+  function playTacticalBeep() {
+    if (!audioEnabled) return;
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(jammerActive ? 680 : 880, ctx.currentTime);
+      gain.gain.setValueAtTime(0.04, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.12);
+    } catch(e) {}
+  }
+
+  function renderRadar() {
+    const canvas = document.getElementById('radarCanvas');
+    if (!canvas) return;
+    const radar = canvas.getContext('2d');
+    radar.fillStyle = '#04090c';
+    radar.fillRect(0, 0, 270, 230);
+
+    const cx = 135, cy = 115, r = 95;
+
+    radar.strokeStyle = '#00ffcc22';
+    radar.lineWidth = 1;
+    [0.35, 0.70, 1.0].forEach(f => {
+      radar.beginPath(); radar.arc(cx, cy, r * f, 0, Math.PI * 2); radar.stroke();
+    });
+
+    radar.beginPath();
+    radar.moveTo(cx - r, cy); radar.lineTo(cx + r, cy);
+    radar.moveTo(cx, cy - r); radar.lineTo(cx, cy + r);
+    radar.stroke();
+
+    radarAngle += 0.035;
+    radar.strokeStyle = '#00ffcc88';
+    radar.lineWidth = 2;
+    radar.beginPath();
+    radar.moveTo(cx, cy);
+    radar.lineTo(cx + r * Math.cos(radarAngle), cy + r * Math.sin(radarAngle));
+    radar.stroke();
+    radar.lineWidth = 1;
+
+    if (motionActive) {
+      uavAngle += uavSpeed;
+      const curR = 82 + Math.sin(uavAngle * 2) * 5;
+      const uX = cx + curR * Math.cos(uavAngle);
+      const uY = cy + (curR - 10) * Math.sin(uavAngle);
+      uavTrail.push({x: uX, y: uY, alpha: 1.0});
+      if (uavTrail.length > 25) uavTrail.shift();
+
+      jammerAngle += jammerSpeed;
+      const jX = cx - 42 + Math.sin(jammerAngle) * 22;
+      const jY = cy + 42 + Math.cos(jammerAngle * 1.5) * 8;
+      jammerTrail.push({x: jX, y: jY, alpha: 1.0});
+      if (jammerTrail.length > 18) jammerTrail.shift();
+    }
+
+    uavTrail.forEach((pt, idx) => {
+      pt.alpha -= 0.03;
+      radar.fillStyle = `rgba(0, 255, 102, ${Math.max(pt.alpha, 0.1)})`;
+      radar.beginPath();
+      radar.arc(pt.x, pt.y, idx === uavTrail.length - 1 ? 4.5 : 2, 0, Math.PI * 2);
+      radar.fill();
+    });
+
+    if (uavTrail.length > 0) {
+      const head = uavTrail[uavTrail.length - 1];
+      radar.fillStyle = '#00ff66';
+      radar.font = '9px monospace';
+      radar.fillText('UAV-ALPHA [ALT:1200M]', head.x + 8, head.y - 4);
+      radar.fillStyle = '#5c7b88';
+      radar.fillText(`HDG: ${Math.round((uavAngle * 180 / Math.PI) % 360)}° | LPI-SECURE`, head.x + 8, head.y + 7);
+    }
+
+    if (jammerActive && jammerTrail.length > 0) {
+      jammerTrail.forEach((pt, idx) => {
+        pt.alpha -= 0.04;
+        radar.fillStyle = `rgba(255, 51, 68, ${Math.max(pt.alpha, 0.1)})`;
+        radar.beginPath();
+        radar.arc(pt.x, pt.y, idx === jammerTrail.length - 1 ? 5 : 2.5, 0, Math.PI * 2);
+        radar.fill();
+      });
+
+      const jHead = jammerTrail[jammerTrail.length - 1];
+      radar.fillStyle = '#ff3344';
+      radar.font = '9px monospace';
+      radar.fillText('JAMMER-01 [GND:0M]', jHead.x - 70, jHead.y + 13);
+    }
+  }
+
+  function renderAttitude() {
+    const canvas = document.getElementById('attitudeCanvas');
+    if (!canvas) return;
+    const att = canvas.getContext('2d');
+    att.fillStyle = '#04090c';
+    att.fillRect(0, 0, 270, 110);
+
+    const cx = 135, cy = 55;
+    if (motionActive) {
+      bankRoll = Math.sin(uavAngle * 2) * 0.16;
+      altVal = 1200 + Math.round(Math.cos(uavAngle * 3) * 12);
+      const hudAlt = document.getElementById('hudAlt');
+      if (hudAlt) hudAlt.innerText = `ALT: ${altVal}M`;
+    }
+
+    att.save();
+    att.translate(cx, cy);
+    att.rotate(bankRoll);
+
+    att.strokeStyle = '#00f3ff';
+    att.lineWidth = 1.5;
+    att.beginPath();
+    att.moveTo(-75, 0); att.lineTo(75, 0);
+    att.stroke();
+
+    att.strokeStyle = '#00ffcc44';
+    att.beginPath();
+    att.moveTo(-35, -15); att.lineTo(35, -15);
+    att.moveTo(-35, 15); att.lineTo(35, 15);
+    att.stroke();
+
+    att.restore();
+
+    att.strokeStyle = '#ffaa00';
+    att.lineWidth = 2;
+    att.strokeRect(cx - 5, cy - 5, 10, 10);
+  }
+
+  function renderSpectrum() {
+    const canvas = document.getElementById('spectrumCanvas');
+    if (!canvas) return;
+    const spec = canvas.getContext('2d');
+    spec.fillStyle = '#04090c';
+    spec.fillRect(0, 0, 300, 180);
+
+    spec.strokeStyle = '#00f3ff';
+    spec.lineWidth = 1;
+    spec.beginPath();
+    for (let x = 0; x < 300; x += 4) {
+      let y = 130 + Math.sin(x * 0.12 + radarAngle * 2) * 6 + (Math.random() * 8);
+      if (x === 0) spec.moveTo(x, y); else spec.lineTo(x, y);
+    }
+    spec.stroke();
+
+    if (jammerActive) {
+      spec.strokeStyle = '#ff3344';
+      spec.lineWidth = 2;
+      spec.beginPath();
+      spec.moveTo(180, 140);
+      spec.lineTo(195, 25 + Math.random() * 10);
+      spec.lineTo(210, 140);
+      spec.stroke();
+
+      spec.fillStyle = '#ff3344';
+      spec.font = '10px monospace';
+      spec.fillText('JAMMER (+6.0 dB)', 158, 20);
+    }
+  }
+
+  function renderConstellation() {
+    const canvas = document.getElementById('constCanvas');
+    if (!canvas) return;
+    const cst = canvas.getContext('2d');
+    cst.fillStyle = '#04090c';
+    cst.fillRect(0, 0, 300, 180);
+
+    const cx = 150, cy = 90;
+    cst.strokeStyle = '#00ffcc22';
+    cst.beginPath(); cst.moveTo(cx, 10); cst.lineTo(cx, 170); cst.stroke();
+    cst.beginPath(); cst.moveTo(10, cy); cst.lineTo(290, cy); cst.stroke();
+
+    cst.fillStyle = 'rgba(255, 51, 68, 0.4)';
+    const sf = jammerActive ? 35 : 8;
+    for (let i = 0; i < 30; i++) {
+      let side = Math.random() > 0.5 ? 55 : -55;
+      let x = cx + side + (Math.random() - 0.5) * sf;
+      let y = cy + (Math.random() - 0.5) * sf;
+      cst.fillRect(x, y, 2.5, 2.5);
+    }
+
+    cst.fillStyle = '#00ff66';
+    cst.fillRect(cx - 55 - 3, cy - 3, 7, 7);
+    cst.fillRect(cx + 55 - 3, cy - 3, 7, 7);
+  }
+
+  function renderWaterfall() {
+    const canvas = document.getElementById('waterfallCanvas');
+    if (!canvas || currentActiveTab !== 1) return;
+    const wfCtx = canvas.getContext('2d');
+
+    const row = new Uint8Array(280);
+    for (let i = 0; i < 280; i++) {
+      let noise = Math.random() * 45;
+      if (jammerActive) {
+        if (currentJammerType === 'tone' && Math.abs(i - 180) < 6) noise += 190;
+        if (currentJammerType === 'chirp' && Math.abs(i - (120 + Math.floor(Math.sin(radarAngle * 2) * 80))) < 10) noise += 180;
+        if (currentJammerType === 'barrage' && i > 80 && i < 220) noise += (Math.random() * 120);
+      }
+      row[i] = Math.min(noise, 255);
+    }
+    wfHistory.unshift(row);
+    if (wfHistory.length > 210) wfHistory.pop();
+
+    wfCtx.fillStyle = '#020508';
+    wfCtx.fillRect(0, 0, 560, 420);
+
+    for (let y = 0; y < wfHistory.length; y++) {
+      const line = wfHistory[y];
+      for (let x = 0; x < line.length; x++) {
+        const val = line[x];
+        if (val > 140) wfCtx.fillStyle = `rgb(${val}, 40, 60)`;
+        else if (val > 70) wfCtx.fillStyle = `rgb(0, ${val + 50}, ${val + 100})`;
+        else wfCtx.fillStyle = `rgb(5, ${val + 15}, ${val + 30})`;
+        wfCtx.fillRect(x * 2, y * 2, 2, 2);
+      }
+    }
+  }
+
+  function mainAnimationLoop() {
+    if (currentActiveTab === 0) {
+      renderRadar();
+      renderAttitude();
+      renderSpectrum();
+      renderConstellation();
+    } else if (currentActiveTab === 1) {
+      renderWaterfall();
+    }
+    requestAnimationFrame(mainAnimationLoop);
+  }
+
+  function setJammerType(t) {
+    currentJammerType = t;
+    document.getElementById('lblJamPwr').innerText = `+6.0 dB (${t.toUpperCase()})`;
+  }
+
+  function setSpreadingFactor(sf) {
+    currentSF = sf;
+    currentPG = sf === 7 ? 8.45 : (sf === 15 ? 11.76 : 14.91);
+    document.getElementById('pgBadge').innerText = `PROCESSING GAIN: +${currentPG.toFixed(2)} dB`;
+    document.getElementById('lblPgVal').innerText = `+${currentPG.toFixed(2)} dB (SF=${sf})`;
+    document.getElementById('lblAjMargin').innerText = `+${(currentPG - 6.0).toFixed(2)} dB (Link Survives)`;
+  }
+
+  function updateSandboxUI() {
+    for (let i = 0; i < 7; i++) {
+      const el = document.getElementById('bit' + i);
+      if (el) {
+        el.innerText = currentCodeword[i];
+        el.parentElement.classList.toggle('flipped', currentCodeword[i] !== originalCodeword[i]);
+      }
+    }
+
+    const r = currentCodeword;
+    const s0 = r[0] ^ r[2] ^ r[3] ^ r[4];
+    const s1 = r[0] ^ r[1] ^ r[2] ^ r[5];
+    const s2 = r[1] ^ r[2] ^ r[3] ^ r[6];
+
+    const box = document.getElementById('syndromeAnalysis');
+    if (!box) return;
+    if (s0 === 0 && s1 === 0 && s2 === 0) {
+      box.innerHTML = `
+        <strong>SYNDROME VECTOR CALCULATION:</strong><br>
+        Syndrome S = H * r^T (mod 2)<br>
+        S = [0, 0, 0]^T -> <span style="color:var(--accent-green); font-weight:bold;">ZERO BIT ERRORS (TRANSMISSION VALID)</span>
+      `;
+    } else {
+      const H = [
+        [1, 0, 1, 1, 1, 0, 0],
+        [1, 1, 1, 0, 0, 1, 0],
+        [0, 1, 1, 1, 0, 0, 1]
+      ];
+      let errPos = -1;
+      for (let c = 0; c < 7; c++) {
+        if (H[0][c] === s0 && H[1][c] === s1 && H[2][c] === s2) {
+          errPos = c + 1; break;
+        }
+      }
+      box.innerHTML = `
+        <strong>SYNDROME VECTOR CALCULATION:</strong><br>
+        Syndrome S = [${s0}, ${s1}, ${s2}]^T -> <span style="color:var(--accent-red); font-weight:bold;">BIT-FLIP DETECTED AT POSITION ${errPos}</span><br>
+        <span style="color:var(--accent-green)">AUTOMATIC SYNDROME INVERSION: Bit ${errPos} (${r[errPos-1]} -> ${r[errPos-1] ^ 1}) RESTORED!</span>
+      `;
+    }
+  }
+
+  function flipBit(idx) {
+    currentCodeword[idx] = currentCodeword[idx] ^ 1;
+    updateSandboxUI();
+  }
+
+  function resetCodeword() {
+    currentCodeword = [...originalCodeword];
+    updateSandboxUI();
+  }
+
+  function burstPacket() {
+    const feed = document.getElementById('telemetryFeed');
+    if (!feed) return;
+    const msg = telemetryMessages[pktCounter % telemetryMessages.length];
+    pktCounter++;
+
+    let corrupt = "";
+    for (let i = 0; i < msg.length; i++) {
+      corrupt += (Math.random() > 0.42 && jammerActive)
+        ? String.fromCharCode(33 + Math.floor(Math.random() * 60))
+        : msg[i];
+    }
+
+    const item = document.createElement('div');
+    item.className = 'feed-item' + (jammerActive ? ' jammed' : '');
+    item.innerHTML = `
+      <div class="meta">[TIME: ${new Date().toLocaleTimeString()}] | PACKET ID: 0x${Math.floor(Math.random()*9000+1000).toString(16)}</div>
+      <div style="color:#aaa;">TRANSMITTED : ${msg}</div>
+      <div class="unprotected">UNPROTECTED : ${corrupt} [CORRUPTED / JAMMED]</div>
+      <div class="protected">TACTICAL RX : ${msg} [RESTORED VIA DSSS+HAMMING]</div>
+    `;
+    feed.prepend(item);
+    playTacticalBeep();
+  }
+
+  function toggleJammer() {
+    jammerActive = !jammerActive;
+    const badge = document.getElementById('jamStatusBadge');
+    if (badge) {
+      badge.innerText = jammerActive ? "HOSTILE JAMMER: +6.0 dB ACTIVE" : "HOSTILE JAMMER: INACTIVE (CLEAN)";
+      badge.className = jammerActive ? "badge alert" : "badge";
+    }
+  }
+
+  function toggleAudio() {
+    audioEnabled = !audioEnabled;
+    const badge = document.getElementById('audioBadge');
+    if (badge) {
+      badge.innerText = audioEnabled ? "AUDIO: ARMED (LIVE)" : "AUDIO: MUTED";
+      badge.className = audioEnabled ? "badge armed" : "badge";
+    }
+  }
+
+  function toggleMotion() {
+    motionActive = !motionActive;
+  }
+
+  window.onload = function() {
+    burstPacket();
+    setInterval(burstPacket, 3200);
+    updateSandboxUI();
+    mainAnimationLoop();
+  };
+</script>
+</body>
+</html>
